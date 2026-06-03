@@ -88,7 +88,16 @@ const getLocalCatalogByPublicKey = (publicKey) => {
       localCatalogMap = loadCatalogs();
     }
 
-    return localCatalogMap.get(publicKey) || null;
+    const catalog = localCatalogMap.get(publicKey) || null;
+
+    if (catalog) {
+      return {
+        ...catalog,
+        metadataSource: "catalogs.json"
+      };
+    }
+
+    return null;
   } catch (error) {
     localCatalogLoadFailed = true;
     logJson({
@@ -129,33 +138,71 @@ const getFirestoreCatalogByPublicKey = async (publicKey) => {
   }
 
   if (!snapshot.exists) {
+    logJson({
+      event: "firestore_catalog_not_found",
+      publicKey,
+      collection: firestoreCollection,
+      databaseId: process.env.FIRESTORE_DATABASE_ID || "(default)",
+      createdAt: new Date().toISOString()
+    });
     return null;
   }
 
-  return normalizeCatalog(
+  const catalog = normalizeCatalog(
     {
       publicKey,
       ...snapshot.data()
     },
     `Firestore ${firestoreCollection}/${publicKey}`
   );
+
+  return {
+    ...catalog,
+    metadataSource: "firestore"
+  };
 };
 
 export const getCatalogByPublicKey = async (publicKey) => {
   const cachedCatalog = catalogMetadataCache.get(publicKey);
   if (cachedCatalog) {
-    return cachedCatalog;
+    return {
+      ...cachedCatalog,
+      metadataCache: "HIT"
+    };
   }
 
   const catalog = (await getFirestoreCatalogByPublicKey(publicKey)) || getLocalCatalogByPublicKey(publicKey);
 
   if (catalog) {
     catalogMetadataCache.set(publicKey, catalog, metadataTtlSeconds);
+
+    return {
+      ...catalog,
+      metadataCache: "MISS"
+    };
   }
 
-  return catalog;
+  return null;
 };
 
 export const invalidateCatalogMetadata = (publicKey) => {
   catalogMetadataCache.del(publicKey);
+};
+
+export const getCatalogDebugInfo = async (publicKey) => {
+  const cachedCatalog = catalogMetadataCache.get(publicKey);
+  const resolvedCatalog = await getCatalogByPublicKey(publicKey);
+
+  return {
+    publicKey,
+    found: Boolean(resolvedCatalog),
+    metadataCache: cachedCatalog ? "HIT" : "MISS",
+    metadataSource: resolvedCatalog?.metadataSource || null,
+    enabled: resolvedCatalog?.enabled ?? null,
+    cacheTtlSeconds: resolvedCatalog?.cacheTtlSeconds ?? null,
+    firestore: {
+      collection: firestoreCollection,
+      databaseId: process.env.FIRESTORE_DATABASE_ID || "(default)"
+    }
+  };
 };

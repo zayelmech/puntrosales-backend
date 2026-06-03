@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { catalogCache } from "./cache.js";
-import { getCatalogByPublicKey, invalidateCatalogMetadata } from "./catalogs.js";
+import { getCatalogByPublicKey, getCatalogDebugInfo, invalidateCatalogMetadata } from "./catalogs.js";
 import { logJson } from "./logger.js";
 
 const FETCH_TIMEOUT_MS = 8000;
@@ -201,6 +201,8 @@ export const createApp = () => {
         userAgent: req.get("user-agent") || null,
         referer: req.get("referer") || null,
         cache: cacheStatus,
+        metadataCache: catalog.metadataCache || null,
+        metadataSource: catalog.metadataSource || null,
         createdAt: new Date().toISOString()
       });
 
@@ -239,6 +241,14 @@ export const createApp = () => {
       publicKey,
       invalidated: true
     });
+  });
+
+  app.get("/internal/debug/catalog/:publicKey", requireInternalToken, async (req, res, next) => {
+    try {
+      res.json(await getCatalogDebugInfo(req.params.publicKey));
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.use((req, res) => {
