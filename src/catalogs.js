@@ -106,7 +106,27 @@ const getFirestoreCatalogByPublicKey = async (publicKey) => {
     return null;
   }
 
-  const snapshot = await db.collection(firestoreCollection).doc(publicKey).get();
+  let snapshot;
+
+  try {
+    snapshot = await db.collection(firestoreCollection).doc(publicKey).get();
+  } catch (error) {
+    const readableError = new Error(
+      `Firestore catalog lookup failed for ${firestoreCollection}/${publicKey}: ${error.message}`
+    );
+    readableError.statusCode = 502;
+
+    logJson({
+      event: "firestore_catalog_lookup_failed",
+      publicKey,
+      collection: firestoreCollection,
+      code: error.code || null,
+      message: error.message,
+      createdAt: new Date().toISOString()
+    });
+
+    throw readableError;
+  }
 
   if (!snapshot.exists) {
     return null;

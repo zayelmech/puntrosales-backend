@@ -1,4 +1,5 @@
 import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import { logJson } from "./logger.js";
 
 let firestoreDb = null;
@@ -43,15 +44,17 @@ export const getFirestoreDb = () => {
     return null;
   }
 
-  admin.initializeApp({
+  const app = admin.initializeApp({
     credential,
     projectId: process.env.FIREBASE_PROJECT_ID || undefined
   });
 
-  firestoreDb = admin.firestore();
+  firestoreDb = getFirestore(app, process.env.FIRESTORE_DATABASE_ID || "(default)");
 
   logJson({
     event: "firestore_configured",
+    projectId: process.env.FIREBASE_PROJECT_ID || null,
+    databaseId: process.env.FIRESTORE_DATABASE_ID || "(default)",
     collection: process.env.FIRESTORE_CATALOG_COLLECTION || "catalog_public_routes",
     createdAt: new Date().toISOString()
   });
