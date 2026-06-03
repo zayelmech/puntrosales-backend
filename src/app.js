@@ -148,6 +148,10 @@ export const createApp = () => {
   app.use(helmet());
   app.use(cors(corsOptions));
   app.options("*", cors(corsOptions));
+  app.use((_req, res, next) => {
+    res.set("X-PuntroSales-Proxy", "catalog-api");
+    next();
+  });
   app.use(rateLimitByClientIp);
 
   app.get("/health", (_req, res) => {
@@ -161,6 +165,14 @@ export const createApp = () => {
       const catalog = await getCatalogByPublicKey(publicKey);
 
       if (!catalog) {
+        logJson({
+          event: "catalog_not_found",
+          publicKey,
+          path: req.originalUrl,
+          ip: getClientIp(req),
+          userAgent: req.get("user-agent") || null,
+          createdAt: new Date().toISOString()
+        });
         jsonError(res, 404, "Catalog not found");
         return;
       }
@@ -229,7 +241,15 @@ export const createApp = () => {
     });
   });
 
-  app.use((_req, res) => {
+  app.use((req, res) => {
+    logJson({
+      event: "route_not_found",
+      method: req.method,
+      path: req.originalUrl,
+      ip: getClientIp(req),
+      userAgent: req.get("user-agent") || null,
+      createdAt: new Date().toISOString()
+    });
     jsonError(res, 404, "Not found");
   });
 
