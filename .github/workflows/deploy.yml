@@ -9,7 +9,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
