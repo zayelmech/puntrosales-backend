@@ -2,7 +2,7 @@
 
 Proxy HTTP simple para servir catálogos públicos de PuntroSales con URL corta, cache en memoria, logs de visitas y protección básica antiabuso.
 
-La app recibe tráfico desde NGINX en la VM y NGINX hace reverse proxy hacia `localhost:8080`.
+La app recibe tráfico desde NGINX en la VM y NGINX hace reverse proxy hacia `localhost:8081`.
 
 ## Requisitos
 
@@ -72,10 +72,10 @@ Modo producción local:
 npm start
 ```
 
-El puerto se configura con `PORT`. Si no existe, usa `8080`.
+El puerto se configura con `PORT`. Si no existe, usa `8080`. En producción con NGINX se usa `8081`.
 
 ```bash
-PORT=8080 npm start
+PORT=8081 npm start
 ```
 
 ## Endpoints
@@ -83,7 +83,7 @@ PORT=8080 npm start
 ### Health
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8081/health
 ```
 
 Respuesta:
@@ -95,13 +95,13 @@ OK
 ### Catálogo público
 
 ```bash
-curl http://localhost:8080/c/demo-puntrosales-001
+curl http://localhost:8081/c/demo-puntrosales-001
 ```
 
 Ver headers de cache:
 
 ```bash
-curl -I http://localhost:8080/c/demo-puntrosales-001
+curl -I http://localhost:8081/c/demo-puntrosales-001
 ```
 
 Headers esperados:
@@ -119,7 +119,7 @@ X-PuntroSales-Cache: HIT
 ### Stats en memoria
 
 ```bash
-curl http://localhost:8080/stats/demo-puntrosales-001
+curl http://localhost:8081/stats/demo-puntrosales-001
 ```
 
 Ejemplo:
@@ -138,7 +138,7 @@ El contador se reinicia cuando se reinicia el proceso.
 Después de que Android actualice o desactive un catálogo, puedes limpiar cache inmediatamente:
 
 ```bash
-curl -X POST http://localhost:8080/internal/cache/invalidate/demo-puntrosales-001 \
+curl -X POST http://localhost:8081/internal/cache/invalidate/demo-puntrosales-001 \
   -H "X-Internal-Token: un-token-privado"
 ```
 
@@ -284,10 +284,10 @@ pm2 restart puntrosales-http-proxy
 ```nginx
 server {
     listen 80;
-    server_name apps.imecatro.com;
+    server_name www.imecatro.com;
 
-    location / {
-        proxy_pass http://127.0.0.1:8080;
+    location /catalog-api/ {
+        proxy_pass http://127.0.0.1:8081/;
         proxy_http_version 1.1;
 
         proxy_set_header Host $host;
@@ -305,7 +305,7 @@ server {
 Si usas HTTPS con Certbot, deja que Certbot agregue el bloque TLS:
 
 ```bash
-sudo certbot --nginx -d apps.imecatro.com
+sudo certbot --nginx -d www.imecatro.com
 ```
 
 ## Uso final
@@ -313,7 +313,21 @@ sudo certbot --nginx -d apps.imecatro.com
 URL que consumirá el frontend:
 
 ```text
-https://www.imecatro.com/json_web_catalog/?catalog=https://apps.imecatro.com/c/demo-puntrosales-001
+https://www.imecatro.com/catalog/?url=BASE64_URL_SAFE(https://www.imecatro.com/catalog-api/c/demo-puntrosales-001)
+```
+
+Con la configuración NGINX `location /catalog-api/` y `proxy_pass http://127.0.0.1:8081/`, NGINX remueve el prefijo `/catalog-api/` antes de enviar la petición a Node.
+
+Por eso:
+
+```text
+https://www.imecatro.com/catalog-api/c/demo-puntrosales-001
+```
+
+llega a la app Node como:
+
+```text
+GET /c/demo-puntrosales-001
 ```
 
 ## Preparación y build
