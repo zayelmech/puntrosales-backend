@@ -78,6 +78,8 @@ jobs:
                'FIRESTORE_CATALOG_COLLECTION=catalog_public_routes' \
                'FIRESTORE_DATABASE_ID=puntrosales' \
                'CATALOG_METADATA_TTL_SECONDS=60' \
+               'FIRESTORE_STATS_COLLECTION=catalog_stats' \
+               'STATS_FLUSH_INTERVAL_SECONDS=60' \
                \"FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID\" \
                \"FIREBASE_SERVICE_ACCOUNT_BASE64=$FIREBASE_SERVICE_ACCOUNT_BASE64\" \
                \"INTERNAL_API_TOKEN=$INTERNAL_API_TOKEN\" \

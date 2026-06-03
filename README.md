@@ -34,6 +34,8 @@ Para producción, configura Firebase Admin para leer Cloud Firestore:
 FIRESTORE_CATALOG_COLLECTION=catalog_public_routes
 FIRESTORE_DATABASE_ID=puntrosales
 CATALOG_METADATA_TTL_SECONDS=60
+FIRESTORE_STATS_COLLECTION=catalog_stats
+STATS_FLUSH_INTERVAL_SECONDS=60
 FIREBASE_PROJECT_ID=logistics-355318
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@logistics-355318.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
@@ -127,11 +129,43 @@ Ejemplo:
 ```json
 {
   "publicKey": "demo-puntrosales-001",
-  "visits": 1
+  "visits": 1,
+  "pendingFlushViews": 1
 }
 ```
 
-El contador se reinicia cuando se reinicia el proceso.
+`visits` es el conteo en memoria desde que inició el proceso. `pendingFlushViews` muestra vistas acumuladas localmente que todavía no se han persistido en Firestore.
+
+La app persiste vistas agregadas en Firestore cada `STATS_FLUSH_INTERVAL_SECONDS`.
+
+Estructura:
+
+```text
+catalog_stats/{publicKey}
+catalog_stats/{publicKey}/daily/{yyyy-MM-dd}
+```
+
+Documento agregado:
+
+```json
+{
+  "publicKey": "demo-puntrosales-001",
+  "totalViews": 1234,
+  "lastViewedAt": "serverTimestamp",
+  "updatedAt": "serverTimestamp"
+}
+```
+
+Documento diario:
+
+```json
+{
+  "publicKey": "demo-puntrosales-001",
+  "date": "2026-06-03",
+  "views": 120,
+  "updatedAt": "serverTimestamp"
+}
+```
 
 ### Invalidar cache
 

@@ -4,6 +4,7 @@ import helmet from "helmet";
 import { catalogCache } from "./cache.js";
 import { getCatalogByPublicKey, getCatalogDebugInfo, invalidateCatalogMetadata } from "./catalogs.js";
 import { logJson } from "./logger.js";
+import { getPendingCatalogViews, recordCatalogView } from "./stats.js";
 
 const FETCH_TIMEOUT_MS = 8000;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
@@ -193,6 +194,7 @@ export const createApp = () => {
       }
 
       visitsByPublicKey.set(publicKey, (visitsByPublicKey.get(publicKey) || 0) + 1);
+      recordCatalogView(publicKey);
 
       logJson({
         event: "catalog_visit",
@@ -224,7 +226,8 @@ export const createApp = () => {
 
       res.json({
         publicKey,
-        visits: visitsByPublicKey.get(publicKey) || 0
+        visits: visitsByPublicKey.get(publicKey) || 0,
+        pendingFlushViews: getPendingCatalogViews(publicKey)
       });
     } catch (error) {
       next(error);
