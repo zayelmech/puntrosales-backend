@@ -215,7 +215,7 @@ export const createApp = () => {
     }
   });
 
-  app.get("/stats/:publicKey", async (req, res, next) => {
+  app.get("/stats/:publicKey", requireInternalToken, async (req, res, next) => {
     const { publicKey } = req.params;
 
     try {

@@ -121,7 +121,8 @@ X-PuntroSales-Cache: HIT
 ### Stats en memoria
 
 ```bash
-curl http://localhost:8081/stats/demo-puntrosales-001
+curl http://localhost:8081/stats/demo-puntrosales-001 \
+  -H "X-Internal-Token: un-token-privado"
 ```
 
 Ejemplo:
