@@ -1,0 +1,8 @@
+[
+  {
+    "publicKey": "demo-puntrosales-001",
+    "firebaseUrl": "${DEMO_PUNTROSALES_FIREBASE_URL}",
+    "enabled": true,
+    "cacheTtlSeconds": 300
+  }
+]
