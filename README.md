@@ -32,7 +32,7 @@ Para producción, configura Firebase Admin para leer Cloud Firestore:
 
 ```bash
 FIRESTORE_CATALOG_COLLECTION=catalog_public_routes
-FIRESTORE_DATABASE_ID=(default)
+FIRESTORE_DATABASE_ID=puntrosales
 CATALOG_METADATA_TTL_SECONDS=60
 FIREBASE_PROJECT_ID=logistics-355318
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@logistics-355318.iam.gserviceaccount.com
