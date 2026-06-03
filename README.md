@@ -46,6 +46,12 @@ También puedes usar una sola variable:
 FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"..."}
 ```
 
+O el mismo JSON en base64:
+
+```bash
+FIREBASE_SERVICE_ACCOUNT_BASE64=base64-encoded-service-account-json
+```
+
 O credenciales por archivo:
 
 ```bash

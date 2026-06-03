@@ -10,6 +10,11 @@ const normalizePrivateKey = (privateKey) => privateKey?.replace(/\\n/g, "\n");
 
 const parseServiceAccountJson = (rawJson) => JSON.parse(rawJson);
 
+const parseServiceAccountBase64 = (base64Json) => {
+  const rawJson = Buffer.from(base64Json, "base64").toString("utf8");
+  return parseServiceAccountJson(rawJson);
+};
+
 const readApplicationCredentialsProjectId = () => {
   if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     return null;
@@ -29,6 +34,15 @@ const readApplicationCredentialsProjectId = () => {
 };
 
 const getFirebaseConfig = () => {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+    const serviceAccount = parseServiceAccountBase64(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64);
+
+    return {
+      credential: admin.credential.cert(serviceAccount),
+      projectId: process.env.FIREBASE_PROJECT_ID || serviceAccount.project_id || null
+    };
+  }
+
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     const serviceAccount = parseServiceAccountJson(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
