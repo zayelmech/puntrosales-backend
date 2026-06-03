@@ -10,12 +10,13 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "lint": "node --check src/server.js && node --check src/app.js && node --check src/catalogs.js && node --check src/cache.js && node --check src/logger.js"
+    "lint": "node --check src/server.js && node --check src/app.js && node --check src/catalogs.js && node --check src/cache.js && node --check src/firestore.js && node --check src/logger.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "firebase-admin": "^13.10.0",
     "helmet": "^7.1.0",
     "node-cache": "^5.1.2"
   }

@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { catalogCache } from "./cache.js";
-import { getCatalogByPublicKey } from "./catalogs.js";
+import { getCatalogByPublicKey, invalidateCatalogMetadata } from "./catalogs.js";
 import { logJson } from "./logger.js";
 
 const FETCH_TIMEOUT_MS = 8000;
@@ -39,6 +39,22 @@ const getClientIp = (req) => {
 };
 
 const jsonError = (res, status, message) => res.status(status).json({ error: message });
+
+const requireInternalToken = (req, res, next) => {
+  const expectedToken = process.env.INTERNAL_API_TOKEN;
+
+  if (!expectedToken) {
+    jsonError(res, 404, "Not found");
+    return;
+  }
+
+  if (req.get("x-internal-token") !== expectedToken) {
+    jsonError(res, 401, "Unauthorized");
+    return;
+  }
+
+  next();
+};
 
 const rateLimitByClientIp = (req, res, next) => {
   const ip = getClientIp(req);
@@ -140,19 +156,21 @@ export const createApp = () => {
 
   app.get("/c/:publicKey", async (req, res, next) => {
     const { publicKey } = req.params;
-    const catalog = getCatalogByPublicKey(publicKey);
-
-    if (!catalog) {
-      jsonError(res, 404, "Catalog not found");
-      return;
-    }
-
-    if (!catalog.enabled) {
-      jsonError(res, 403, "Catalog disabled");
-      return;
-    }
 
     try {
+      const catalog = await getCatalogByPublicKey(publicKey);
+
+      if (!catalog) {
+        jsonError(res, 404, "Catalog not found");
+        return;
+      }
+
+      if (!catalog.enabled) {
+        catalogCache.del(publicKey);
+        jsonError(res, 403, "Catalog disabled");
+        return;
+      }
+
       let cacheStatus = "HIT";
       let catalogJsonText = catalogCache.get(publicKey);
 
@@ -181,17 +199,33 @@ export const createApp = () => {
     }
   });
 
-  app.get("/stats/:publicKey", (req, res) => {
+  app.get("/stats/:publicKey", async (req, res, next) => {
     const { publicKey } = req.params;
 
-    if (!getCatalogByPublicKey(publicKey)) {
-      jsonError(res, 404, "Catalog not found");
-      return;
+    try {
+      if (!(await getCatalogByPublicKey(publicKey))) {
+        jsonError(res, 404, "Catalog not found");
+        return;
+      }
+
+      res.json({
+        publicKey,
+        visits: visitsByPublicKey.get(publicKey) || 0
+      });
+    } catch (error) {
+      next(error);
     }
+  });
+
+  app.post("/internal/cache/invalidate/:publicKey", requireInternalToken, (req, res) => {
+    const { publicKey } = req.params;
+
+    invalidateCatalogMetadata(publicKey);
+    catalogCache.del(publicKey);
 
     res.json({
       publicKey,
-      visits: visitsByPublicKey.get(publicKey) || 0
+      invalidated: true
     });
   });
 

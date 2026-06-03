@@ -28,6 +28,29 @@ Edita `.env` y reemplaza `DEMO_PUNTROSALES_FIREBASE_URL` con la URL real de Fire
 
 No subas `.env` a git. La URL de Firebase puede contener un `token` de acceso y debe quedarse fuera del repositorio publico.
 
+Para producción, configura Firebase Admin para leer Cloud Firestore:
+
+```bash
+FIRESTORE_CATALOG_COLLECTION=catalog_public_routes
+CATALOG_METADATA_TTL_SECONDS=60
+FIREBASE_PROJECT_ID=logistics-355318
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@logistics-355318.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+INTERNAL_API_TOKEN=un-token-privado
+```
+
+También puedes usar una sola variable:
+
+```bash
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"..."}
+```
+
+O credenciales por archivo:
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
+```
+
 ## Correr local
 
 Modo desarrollo con reload por cambios:
@@ -103,9 +126,63 @@ Ejemplo:
 
 El contador se reinicia cuando se reinicia el proceso.
 
+### Invalidar cache
+
+Después de que Android actualice o desactive un catálogo, puedes limpiar cache inmediatamente:
+
+```bash
+curl -X POST http://localhost:8080/internal/cache/invalidate/demo-puntrosales-001 \
+  -H "X-Internal-Token: un-token-privado"
+```
+
+Respuesta:
+
+```json
+{
+  "publicKey": "demo-puntrosales-001",
+  "invalidated": true
+}
+```
+
+Si no llamas este endpoint, el proxy descubrirá cambios automáticamente después de `CATALOG_METADATA_TTL_SECONDS`.
+
 ## Configurar catálogos
 
-Los catálogos viven en `catalogs.json`.
+En producción, los catálogos viven en Cloud Firestore. El proxy lee documentos desde:
+
+```text
+catalog_public_routes/{publicKey}
+```
+
+Ejemplo:
+
+```text
+catalog_public_routes/demo-puntrosales-001
+```
+
+Documento esperado:
+
+```json
+{
+  "publicKey": "demo-puntrosales-001",
+  "firebaseUrl": "https://firebasestorage.googleapis.com/v0/b/...",
+  "enabled": true,
+  "cacheTtlSeconds": 300,
+  "ownerApp": "puntrosales-android",
+  "catalogType": "restaurant-menu",
+  "updatedAt": "2026-06-03T00:00:00.000Z",
+  "disabledAt": null
+}
+```
+
+Campos usados por el proxy:
+
+- `publicKey`: slug público usado en `/c/:publicKey`.
+- `firebaseUrl`: URL real de Firebase Storage. No se expone en la respuesta.
+- `enabled`: permite apagar un catálogo sin borrar la configuración.
+- `cacheTtlSeconds`: TTL de cache en memoria para ese catálogo.
+
+`catalogs.json` queda como fallback local si Firebase Admin no está configurado.
 
 ```json
 [
@@ -118,12 +195,21 @@ Los catálogos viven en `catalogs.json`.
 ]
 ```
 
-Campos:
+Para dar de baja un catálogo desde Android, cambia:
 
-- `publicKey`: slug público usado en `/c/:publicKey`.
-- `firebaseUrl`: URL real de Firebase Storage o placeholder de variable de entorno. No se expone en la respuesta.
-- `enabled`: permite apagar un catálogo sin borrar la configuración.
-- `cacheTtlSeconds`: TTL de cache en memoria para ese catálogo.
+```json
+{
+  "enabled": false
+}
+```
+
+El proxy responderá:
+
+```json
+{
+  "error": "Catalog disabled"
+}
+```
 
 ## CORS
 
