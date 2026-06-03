@@ -85,12 +85,13 @@ export const getFirestoreDb = () => {
     projectId: firebaseConfig.projectId
   });
 
-  firestoreDb = getFirestore(app, process.env.FIRESTORE_DATABASE_ID || "(default)");
+  const databaseId = process.env.FIRESTORE_DATABASE_ID || "(default)";
+  firestoreDb = databaseId === "(default)" ? getFirestore(app) : getFirestore(app, databaseId);
 
   logJson({
     event: "firestore_configured",
     projectId: firebaseConfig.projectId,
-    databaseId: process.env.FIRESTORE_DATABASE_ID || "(default)",
+    databaseId,
     collection: process.env.FIRESTORE_CATALOG_COLLECTION || "catalog_public_routes",
     createdAt: new Date().toISOString()
   });
